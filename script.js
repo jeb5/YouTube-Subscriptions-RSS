@@ -2,13 +2,13 @@
 	const dialog = document.createElement("dialog");
 	const label = document.createElement("label");
 	const progress = document.createElement("progress");
-	dialog.style.cssText = "display: flex; flex-direction: column; gap: 15px; padding: 20px; [open] {background: pink;}";
+	dialog.style.cssText = "display: flex; flex-direction: column; gap: 15px; padding: 20px;";
 	dialog.appendChild(label);
 	dialog.appendChild(progress);
 	document.querySelector("ytd-app").appendChild(dialog);
 	dialog.showModal();
 	try {
-		const channelElements = [...document.querySelectorAll("#main-link.channel-link")];
+		const channelElements = [...document.querySelectorAll("ytd-browse #main-link.channel-link")];
 		progress.max = channelElements.length;
 		progress.value = 0;
 		const channels = [];
