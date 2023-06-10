@@ -8,7 +8,7 @@
 	document.querySelector("ytd-app").appendChild(dialog);
 	dialog.showModal();
 	try {
-		const channelElements = [...document.querySelectorAll("ytd-browse #main-link.channel-link")];
+		const channelElements = [...document.querySelectorAll("ytd-browse:not([hidden]) #main-link.channel-link")];
 		progress.max = channelElements.length;
 		progress.value = 0;
 		const channels = [];
