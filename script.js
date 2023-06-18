@@ -14,20 +14,25 @@
 		const channels = [];
 		for (e of channelElements) {
 			label.innerText = `Fetching URLS... (${progress.value}/${progress.max})`;
-			const channelName = e.querySelector("yt-formatted-string.ytd-channel-name").innerText;
-			const username = e.href.match("/@(.*)$")[1];
-			const channelReq = await fetch(`https://www.youtube.com/@${username}`);
-			const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
-			const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
-			const channelId = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null)[1];
-			if (channelId == null) throw new Error(`Couldn't find channel id for @${username}`);
-			channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, channelName]);
-			progress.value++;
-			progress.replaceWith(progress);
+			try {
+				const channelName = e.querySelector("yt-formatted-string.ytd-channel-name").innerText;
+				const username = e.href.match("/@(.*)$")[1];
+				const channelReq = await fetch(`https://www.youtube.com/@${username}`);
+				if (!channelReq.ok) { console.error(`Couldn't fetch channel page for @${username}`); continue; }
+				const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
+				const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
+				const channelIdMatch = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null);
+				if (channelIdMatch == null) { console.error(`Couldn't find channel id for @${username}`); continue; }
+				channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName]);
+			} finally {
+				progress.value++;
+				progress.replaceWith(progress);
+			}
 		};
-		if (channels.length == 0) {
-			alert("Couldn't find any subscriptions");
-		} else {
+		if (channelElements.length == 0) alert("Couldn't find any subscriptions");
+		const missedChannels = channelElements.length - channels.length;
+		if (missedChannels > 0) alert(`${missedChannels} channel${missedChannels > 1 ? "s" : ""} couldn't be fetched. Check the console for more info.`);
+		if (channels.length > 0) {
 			console.log(channels.map(([feed, _]) => feed).join("\n"));
 			let opmlText = `<opml version="1.0"><head><title>YouTube Subscriptions as RSS</title></head><body><outline text="YouTube Subscriptions" title="YouTube Subscriptions">${channels
 				.map(([feed, channelName]) => `<outline type="rss" text="${channelName}" title="${channelName}" xmlUrl="${feed}"/>`)
@@ -40,7 +45,7 @@
 			anchorTag.click();
 		}
 	} catch (e) {
-		console.log(e);
+		console.error(e);
 		alert("Something went wrong. Check the console for more info.");
 	} finally {
 		dialog.close();

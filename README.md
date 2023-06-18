@@ -29,20 +29,25 @@ Paste this into the console at [https://www.youtube.com/feed/channels](https://w
 		const channels = [];
 		for (e of channelElements) {
 			label.innerText = `Fetching URLS... (${progress.value}/${progress.max})`;
-			const channelName = e.querySelector("yt-formatted-string.ytd-channel-name").innerText;
-			const username = e.href.match("/@(.*)$")[1];
-			const channelReq = await fetch(`https://www.youtube.com/@${username}`);
-			const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
-			const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
-			const channelId = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null)[1];
-			if (channelId == null) throw new Error(`Couldn't find channel id for @${username}`);
-			channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, channelName]);
-			progress.value++;
-			progress.replaceWith(progress);
+			try {
+				const channelName = e.querySelector("yt-formatted-string.ytd-channel-name").innerText;
+				const username = e.href.match("/@(.*)$")[1];
+				const channelReq = await fetch(`https://www.youtube.com/@${username}`);
+				if (!channelReq.ok) { console.error(`Couldn't fetch channel page for @${username}`); continue; }
+				const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
+				const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
+				const channelIdMatch = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null);
+				if (channelIdMatch == null) { console.error(`Couldn't find channel id for @${username}`); continue; }
+				channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName]);
+			} finally {
+				progress.value++;
+				progress.replaceWith(progress);
+			}
 		};
-		if (channels.length == 0) {
-			alert("Couldn't find any subscriptions");
-		} else {
+		if (channelElements.length == 0) alert("Couldn't find any subscriptions");
+		const missedChannels = channelElements.length - channels.length;
+		if (missedChannels > 0) alert(`${missedChannels} channel${missedChannels > 1 ? "s" : ""} couldn't be fetched. Check the console for more info.`);
+		if (channels.length > 0) {
 			console.log(channels.map(([feed, _]) => feed).join("\n"));
 			let opmlText = `<opml version="1.0"><head><title>YouTube Subscriptions as RSS</title></head><body><outline text="YouTube Subscriptions" title="YouTube Subscriptions">${channels
 				.map(([feed, channelName]) => `<outline type="rss" text="${channelName}" title="${channelName}" xmlUrl="${feed}"/>`)
@@ -55,7 +60,7 @@ Paste this into the console at [https://www.youtube.com/feed/channels](https://w
 			anchorTag.click();
 		}
 	} catch (e) {
-		console.log(e);
+		console.error(e);
 		alert("Something went wrong. Check the console for more info.");
 	} finally {
 		dialog.close();
@@ -67,7 +72,7 @@ Paste this into the console at [https://www.youtube.com/feed/channels](https://w
 ## Bookmarklet:
 You can save this as a bookmarklet to run it in one click. Just create a new bookmark and paste the following into the URL field:
 ```
-javascript:(function()%7B(async()%3D%3E%7Bconst%20a%3Ddocument.createElement(%22dialog%22)%2Cb%3Ddocument.createElement(%22label%22)%2Cc%3Ddocument.createElement(%22progress%22)%3Ba.style.cssText%3D%22display%3A%20flex%3B%20flex-direction%3A%20column%3B%20gap%3A%2015px%3B%20padding%3A%2020px%3B%22%2Ca.appendChild(b)%2Ca.appendChild(c)%2Cdocument.querySelector(%22ytd-app%22).appendChild(a)%2Ca.showModal()%3Btry%7Bconst%20a%3D%5B...document.querySelectorAll(%22ytd-browse%3Anot(%5Bhidden%5D)%20%23main-link.channel-link%22)%5D%3Bc.max%3Da.length%2Cc.value%3D0%3Bconst%20d%3D%5B%5D%3Bfor(e%20of%20a)%7Bb.innerText%3D%60Fetching%20URLS...%20(%24%7Bc.value%7D%2F%24%7Bc.max%7D)%60%3Bconst%20a%3De.querySelector(%22yt-formatted-string.ytd-channel-name%22).innerText%2Cf%3De.href.match(%22%2F%40(.*)%24%22)%5B1%5D%2Cg%3Dawait%20fetch(%60https%3A%2F%2Fwww.youtube.com%2F%40%24%7Bf%7D%60)%2Ch%3Dnew%20DOMParser().parseFromString(await%20g.text()%2C%22text%2Fhtml%22)%2Ci%3Dh.querySelectorAll(%22body%20%3E%20link%5Brel%3Dalternate%5D%2C%20body%20%3E%20link%5Brel%3Dcanonical%5D%22)%2Cj%3D%5B...i%5D.map(a%3D%3Ea.href.match(%22%2Fchannel%2F(%5Ba-zA-Z0-9_-%5D%2B%3F)%24%22)).find(a%3D%3Enull!%3Da)%5B1%5D%3Bif(null%3D%3Dj)throw%20new%20Error(%60Couldn't%20find%20channel%20id%20for%20%40%24%7Bf%7D%60)%3Bd.push(%5B%60https%3A%2F%2Fwww.youtube.com%2Ffeeds%2Fvideos.xml%3Fchannel_id%3D%24%7Bj%7D%60%2Ca%5D)%2Cc.value%2B%2B%2Cc.replaceWith(c)%7Dif(0%3D%3Dd.length)alert(%22Couldn't%20find%20any%20subscriptions%22)%3Belse%7Bconsole.log(d.map((%5Ba%2Cb%5D)%3D%3Ea).join(%22%5Cn%22))%3Blet%20a%3D%60%3Copml%20version%3D%221.0%22%3E%3Chead%3E%3Ctitle%3EYouTube%20Subscriptions%20as%20RSS%3C%2Ftitle%3E%3C%2Fhead%3E%3Cbody%3E%3Coutline%20text%3D%22YouTube%20Subscriptions%22%20title%3D%22YouTube%20Subscriptions%22%3E%24%7Bd.map((%5Ba%2Cb%5D)%3D%3E%60%3Coutline%20type%3D%22rss%22%20text%3D%22%24%7Bb%7D%22%20title%3D%22%24%7Bb%7D%22%20xmlUrl%3D%22%24%7Ba%7D%22%2F%3E%60).join(%22%22)%7D%3C%2Foutline%3E%3C%2Fbody%3E%3C%2Fopml%3E%60%3Bconst%20b%3Dwindow.URL.createObjectURL(new%20Blob(%5Ba%5D%2C%7Btype%3A%22text%2Fplain%22%7D))%2Cc%3Ddocument.createElement(%22a%22)%3Bc.setAttribute(%22download%22%2C%22youtube_subs.opml%22)%2Cc.setAttribute(%22href%22%2Cb)%2Cc.dataset.downloadurl%3D%60text%2Fplain%3Ayoutube_subs.opml%3A%24%7Bb%7D%60%2Cc.click()%7D%7Dcatch(a)%7Bconsole.log(a)%2Calert(%22Something%20went%20wrong.%20Check%20the%20console%20for%20more%20info.%22)%7Dfinally%7Ba.close()%2Ca.remove()%7D%7D)()%3B%7D)()%3B
+javascript:(function()%7B(async()%3D%3E%7Bconst%20t%3Ddocument.createElement(%22dialog%22)%2Cn%3Ddocument.createElement(%22label%22)%2Co%3Ddocument.createElement(%22progress%22)%3Bt.style.cssText%3D%22display%3A%20flex%3B%20flex-direction%3A%20column%3B%20gap%3A%2015px%3B%20padding%3A%2020px%3B%22%2Ct.appendChild(n)%2Ct.appendChild(o)%2Cdocument.querySelector(%22ytd-app%22).appendChild(t)%2Ct.showModal()%3Btry%7Bconst%20t%3D%5B...document.querySelectorAll(%22ytd-browse%3Anot(%5Bhidden%5D)%20%23main-link.channel-link%22)%5D%3Bo.max%3Dt.length%2Co.value%3D0%3Bconst%20l%3D%5B%5D%3Bfor(e%20of%20t)%7Bn.innerText%3D%60Fetching%20URLS...%20(%24%7Bo.value%7D%2F%24%7Bo.max%7D)%60%3Btry%7Bconst%20t%3De.querySelector(%22yt-formatted-string.ytd-channel-name%22).innerText%2Cn%3De.href.match(%22%2F%40(.*)%24%22)%5B1%5D%2Co%3Dawait%20fetch(%60https%3A%2F%2Fwww.youtube.com%2F%40%24%7Bn%7D%60)%3Bif(!o.ok)%7Bconsole.error(%60Couldn't%20fetch%20channel%20page%20for%20%40%24%7Bn%7D%60)%3Bcontinue%7Dconst%20a%3D(new%20DOMParser).parseFromString(await%20o.text()%2C%22text%2Fhtml%22)%2Cr%3D%5B...a.querySelectorAll(%22body%20%3E%20link%5Brel%3Dalternate%5D%2C%20body%20%3E%20link%5Brel%3Dcanonical%5D%22)%5D.map((e%3D%3Ee.href.match(%22%2Fchannel%2F(%5Ba-zA-Z0-9_-%5D%2B%3F)%24%22))).find((e%3D%3Enull!%3De))%3Bif(null%3D%3Dr)%7Bconsole.error(%60Couldn't%20find%20channel%20id%20for%20%40%24%7Bn%7D%60)%3Bcontinue%7Dl.push(%5B%60https%3A%2F%2Fwww.youtube.com%2Ffeeds%2Fvideos.xml%3Fchannel_id%3D%24%7Br%5B1%5D%7D%60%2Ct%5D)%7Dfinally%7Bo.value%2B%2B%2Co.replaceWith(o)%7D%7D0%3D%3Dt.length%26%26alert(%22Couldn't%20find%20any%20subscriptions%22)%3Bconst%20a%3Dt.length-l.length%3Bif(a%3E0%26%26alert(%60%24%7Ba%7D%20channel%24%7Ba%3E1%3F%22s%22%3A%22%22%7D%20couldn't%20be%20fetched.%20Check%20the%20console%20for%20more%20info.%60)%2Cl.length%3E0)%7Bconsole.log(l.map(((%5Be%2Ct%5D)%3D%3Ee)).join(%22%5Cn%22))%3Blet%20e%3D%60%3Copml%20version%3D%221.0%22%3E%3Chead%3E%3Ctitle%3EYouTube%20Subscriptions%20as%20RSS%3C%2Ftitle%3E%3C%2Fhead%3E%3Cbody%3E%3Coutline%20text%3D%22YouTube%20Subscriptions%22%20title%3D%22YouTube%20Subscriptions%22%3E%24%7Bl.map(((%5Be%2Ct%5D)%3D%3E%60%3Coutline%20type%3D%22rss%22%20text%3D%22%24%7Bt%7D%22%20title%3D%22%24%7Bt%7D%22%20xmlUrl%3D%22%24%7Be%7D%22%2F%3E%60)).join(%22%22)%7D%3C%2Foutline%3E%3C%2Fbody%3E%3C%2Fopml%3E%60%3Bconst%20t%3Dwindow.URL.createObjectURL(new%20Blob(%5Be%5D%2C%7Btype%3A%22text%2Fplain%22%7D))%2Cn%3Ddocument.createElement(%22a%22)%3Bn.setAttribute(%22download%22%2C%22youtube_subs.opml%22)%2Cn.setAttribute(%22href%22%2Ct)%2Cn.dataset.downloadurl%3D%60text%2Fplain%3Ayoutube_subs.opml%3A%24%7Bt%7D%60%2Cn.click()%7D%7Dcatch(e)%7Bconsole.error(e)%2Calert(%22Something%20went%20wrong.%20Check%20the%20console%20for%20more%20info.%22)%7Dfinally%7Bt.close()%2Ct.remove()%7D%7D)()%3B%7D)()%3B
 ```
 
 ---
