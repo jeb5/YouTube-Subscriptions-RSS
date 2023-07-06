@@ -16,13 +16,12 @@
 			label.innerText = `Fetching URLS... (${progress.value}/${progress.max})`;
 			try {
 				const channelName = e.querySelector("yt-formatted-string.ytd-channel-name").innerText;
-				const username = e.href.match("/@(.*)$")[1];
-				const channelReq = await fetch(`https://www.youtube.com/@${username}`);
-				if (!channelReq.ok) { console.error(`Couldn't fetch channel page for @${username}`); continue; }
+				const channelReq = await fetch(e.href);
+				if (!channelReq.ok) { console.error(`Couldn't fetch channel page for ${channelName}`); continue; }
 				const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
 				const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
 				const channelIdMatch = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null);
-				if (channelIdMatch == null) { console.error(`Couldn't find channel id for @${username}`); continue; }
+				if (channelIdMatch == null) { console.error(`Couldn't find channel id for ${channelName}`); continue; }
 				channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName]);
 			} finally {
 				progress.value++;
