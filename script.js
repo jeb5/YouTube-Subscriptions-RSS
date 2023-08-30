@@ -33,7 +33,7 @@
 		if (missedChannels > 0) alert(`${missedChannels} channel${missedChannels > 1 ? "s" : ""} couldn't be fetched. Check the console for more info.`);
 		if (channels.length > 0) {
 			console.log(channels.map(([feed, _]) => feed).join("\n"));
-			let opmlText = `<opml version="1.0">\n\t<head>\n\t\t<title>YouTube Subscriptions as RSS</title>\n\t</head>\n\t<body>\n\t\t<outline text="YouTube Subscriptions">${channels
+			let opmlText = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="1.0">\n\t<head>\n\t\t<title>YouTube Subscriptions as RSS</title>\n\t</head>\n\t<body>\n\t\t<outline text="YouTube Subscriptions">${channels
         .map(
           ([feed, channelName]) =>
             `\n\t\t\t<outline type="rss" text="${channelName}" xmlUrl="${feed}"/>`
