@@ -22,7 +22,7 @@
 				const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
 				const channelIdMatch = [...links].map(e => e.href.match("/channel/([a-zA-Z0-9_\-]+?)$")).find(e => e != null);
 				if (channelIdMatch == null) { console.error(`Couldn't find channel id for ${channelName}`); continue; }
-				channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName]);
+				channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName, e.href]);
 			} finally {
 				progress.value++;
 				progress.replaceWith(progress);
@@ -31,12 +31,13 @@
 		if (channelElements.length == 0) alert("Couldn't find any subscriptions");
 		const missedChannels = channelElements.length - channels.length;
 		if (missedChannels > 0) alert(`${missedChannels} channel${missedChannels > 1 ? "s" : ""} couldn't be fetched. Check the console for more info.`);
+		const escapeXML = (str)=> str.replace(/[<>&'"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[c]))
 		if (channels.length > 0) {
-			console.log(channels.map(([feed, _]) => feed).join("\n"));
+			console.log(channels.map(([feed]) => feed).join("\n"));
 			let opmlText = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="1.0">\n\t<head>\n\t\t<title>YouTube Subscriptions as RSS</title>\n\t</head>\n\t<body>\n\t\t<outline text="YouTube Subscriptions">${channels
         .map(
-          ([feed, channelName]) =>
-            `\n\t\t\t<outline type="rss" text="${channelName}" xmlUrl="${feed}"/>`
+          ([feed, channelName, channelUrl]) =>
+            `\n\t\t\t<outline type="rss" text="${escapeXML(channelName)}" title="${escapeXML(channelName)}" xmlUrl="${feed}" htmlUrl="${channelUrl}"/>`
         )
         .join("")}\n\t\t</outline>\n\t</body>\n</opml>`;
 			const url = window.URL.createObjectURL(new Blob([opmlText], { type: "text/plain" }));
