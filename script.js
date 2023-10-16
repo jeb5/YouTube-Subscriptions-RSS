@@ -7,8 +7,23 @@
 	dialog.appendChild(progress);
 	document.querySelector("ytd-app").appendChild(dialog);
 	dialog.showModal();
+	label.innerText = "Loading subscriptions...";
+  const content = document.getElementById("content");
+  let contentH;
+  do {
+    contentH = content.offsetHeight;
+    window.scrollBy(0, 100000);
+    await new Promise((r) => setTimeout(r, 500));
+  } while (
+    content.querySelector("#spinnerContainer.active") != null ||
+    content.offsetHeight > contentH
+  );
 	try {
-		const channelElements = [...document.querySelectorAll("ytd-browse:not([hidden]) #main-link.channel-link")];
+		const channelElements = [
+      ...content.querySelectorAll(
+        "ytd-browse:not([hidden]) #main-link.channel-link"
+      ),
+    ];
 		progress.max = channelElements.length;
 		progress.value = 0;
 		const channels = [];
