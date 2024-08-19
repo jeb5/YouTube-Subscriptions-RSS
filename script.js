@@ -20,6 +20,7 @@
       progress.max = channelElements.length;
       progress.value = 0;
       const channels = [];
+      const escapeHTMLPolicy = window.chrome ? trustedTypes.createPolicy("m", { createHTML: (string) => string, }) : null;
       for (e of channelElements) {
          label.innerText = `Fetching URLS... (${progress.value}/${progress.max})`;
          try {
@@ -29,7 +30,9 @@
                console.error(`Couldn't fetch channel page for ${channelName}`);
                continue;
             }
-            const channelPageDoc = new DOMParser().parseFromString(await channelReq.text(), "text/html");
+            let channelHTML = await channelReq.text();
+            if (window.chrome) channelHTML = escapeHTMLPolicy.createHTML(channelHTML);
+            const channelPageDoc = Document.parseHTMLUnsafe(channelHTML);
             const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
             const channelIdMatch = [...links].map((e) => e.href.match("/channel/([a-zA-Z0-9_-]+?)$")).find((e) => e != null);
             if (channelIdMatch == null) {
