@@ -20,7 +20,6 @@
       progress.max = channelElements.length;
       progress.value = 0;
       const channels = [];
-      const escapeHTMLPolicy = window.chrome ? trustedTypes.createPolicy("m", { createHTML: (string) => string, }) : null;
       for (e of channelElements) {
          label.innerText = `Fetching URLS... (${progress.value}/${progress.max})`;
          try {
@@ -31,15 +30,12 @@
                continue;
             }
             let channelHTML = await channelReq.text();
-            if (window.chrome) channelHTML = escapeHTMLPolicy.createHTML(channelHTML);
-            const channelPageDoc = Document.parseHTMLUnsafe(channelHTML);
-            const links = channelPageDoc.querySelectorAll("body > link[rel=alternate], body > link[rel=canonical]");
-            const channelIdMatch = [...links].map((e) => e.href.match("/channel/([a-zA-Z0-9_-]+?)$")).find((e) => e != null);
-            if (channelIdMatch == null) {
-               console.error(`Couldn't find channel id for ${channelName}`);
+            const rssUrlMatch = channelHTML.match(/<link\srel="alternate"\stype="application\/rss\+xml"\stitle="RSS"\shref="(.+?)"/);
+            if (rssUrlMatch == null) {
+               console.error(`Couldn't find RSS feed for ${channelName}`);
                continue;
             }
-            channels.push([`https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`, channelName, e.href]);
+            channels.push([rssUrlMatch[1], channelName, e.href]);
          } finally {
             progress.value++;
             progress.replaceWith(progress);
